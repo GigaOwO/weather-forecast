@@ -20,6 +20,8 @@
 # production
 /build
 
+# local agent instructions
+AGENTS.md
 # misc
 .DS_Store
 *.pem

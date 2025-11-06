@@ -147,7 +147,13 @@ function buildWeeklyTemperatureTable(
 
   for (const section of weeklyForecast) {
     for (const series of section.timeSeries) {
-      for (const rawArea of series.areas) {
+      const timeDefines = Array.isArray(series.timeDefines)
+        ? (series.timeDefines as string[])
+        : [];
+
+      const areas = Array.isArray(series.areas) ? series.areas : [];
+
+      for (const rawArea of areas) {
         if (shortTerm === null) {
           const parsedShort = weeklyShortTermAreaSchema.safeParse(rawArea);
           if (parsedShort.success && parsedShort.data.area.name === cityLabel) {
@@ -158,7 +164,8 @@ function buildWeeklyTemperatureTable(
               parsedShort.data.temps.at(1),
             );
             if (min !== null || max !== null) {
-              shortTermDate = extractDate(series.timeDefines.at(0) ?? "");
+              const firstDate = timeDefines.at(0) ?? null;
+              shortTermDate = firstDate === null ? null : extractDate(firstDate);
               shortTerm = {
                 minCelsius: min,
                 maxCelsius: max,
@@ -170,7 +177,7 @@ function buildWeeklyTemperatureTable(
 
         const parsedLong = weeklyLongTermAreaSchema.safeParse(rawArea);
         if (parsedLong.success && parsedLong.data.area.name === cityLabel) {
-          parsedLong.data.timeDefines.forEach((timeDefine, index) => {
+          timeDefines.forEach((timeDefine, index) => {
             const date = extractDate(timeDefine);
             if (date === "") {
               return;
