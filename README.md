@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 天気予報ダッシュボード
 
-## Getting Started
+リアルタイムの天気予報APIと気象庁が公開する週間予報データを組み合わせ、選択した地域の予報をグラフ付きで閲覧できる Next.js アプリケーションです。SWR によるデータキャッシュと `react-chartjs-2` によるビジュアライズで、最新の気象情報を直感的に確認できます。
 
-First, run the development server:
+## 主な機能
+
+- livedoor 互換の天気予報APIからの当日〜明後日の予報取得
+- 気象庁配信データを利用した明日・明後日の気温補完ロジック
+- 地域選択コンボボックス（全国の一次細分区域に対応）
+- 最高 / 最低気温のラインチャート表示
+- 降水確率や詳細情報を含むカードレイアウト
+
+## 使用技術
+
+- Next.js 16 (App Router, Route Handler)
+- TypeScript / SWR / Zod
+- Chart.js + react-chartjs-2
+- Biome (Lint / Format)
+- Noto Sans JP（`next/font` 経由で配信）
+
+## セットアップ
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+ブラウザで <http://localhost:3000> を開くとアプリケーションを確認できます。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### テスト / Lint
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run lint
+```
 
-## Learn More
+## ディレクトリ構成
 
-To learn more about Next.js, take a look at the following resources:
+```
+src/
+├── app/                     # App Router エントリポイント
+├── features/
+│   └── weather/             # 天気予報機能（Feature Based）
+│       ├── components/      # UI コンポーネント
+│       ├── constants/       # 定数・マスタデータ
+│       ├── hooks/           # SWR を利用したカスタムフック
+│       ├── services/        # API アクセス・データ整形
+│       ├── types/           # Zod スキーマと型定義
+│       └── libs/            # ライブラリ初期化（Chart.js など）
+└── shared/                  # 共通コンポーネント（導入予定）
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 環境変数
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+デフォルトでは環境変数は不要ですが、必要に応じて `.env` を作成し、`.env.example` を参考に設定してください。`NEXT_PUBLIC_` プレフィックスは使用しません。
 
-## Deploy on Vercel
+## データソース
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- 天気予報 API（livedoor 互換）: <https://weather.tsukumijima.net/>
+- 気象庁 週間天気予報 JSON: <https://www.jma.go.jp/bosai/>
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## ライセンス
+
+このリポジトリは学習・検証目的で利用することを想定しています。外部 API の利用規約に従い、適切にデータを扱ってください。
