@@ -1,19 +1,19 @@
-import { WEATHER_FORECAST_API_BASE_URL } from "@/features/weather/constants/api";
+import { cache } from "react";
+import "server-only";
 import {
   findCityGroupByCityId,
   findCityOptionById,
-} from "@/features/weather/constants/cities";
-import { fetchWeeklyForecast } from "@/features/weather/services/weeklyForecastService";
+  WEATHER_FORECAST_API_BASE_URL,
+} from "@/features/weather/constants";
+import { fetchWeeklyForecast } from "@/features/weather/services";
 import {
   type Forecast,
   type WeatherForecast,
-  weatherForecastSchema,
-} from "@/features/weather/types/weather";
-import {
   type WeeklyForecast,
+  weatherForecastSchema,
   weeklyLongTermAreaSchema,
   weeklyShortTermAreaSchema,
-} from "@/features/weather/types/weekly";
+} from "@/features/weather/types";
 
 type WeeklyTemperature = {
   minCelsius: string | null;
@@ -32,48 +32,55 @@ type WeeklyTemperatureTable = {
  * @returns Zodで検証済みの天気予報データ
  * @throws API呼び出しやZod検証に失敗した場合はエラーを投げる
  */
-export async function fetchWeatherForecast(
-  cityId: string,
-): Promise<WeatherForecast> {
-  const cityOption = findCityOptionById(cityId);
+export const fetchWeatherForecast = cache(
+  async (cityId: string): Promise<WeatherForecast> => {
+    const cityOption = findCityOptionById(cityId);
+    if (
+      cityOption === undefined ||
+      findCityGroupByCityId(cityId) === undefined
+    ) {
+      throw new Error(
+        "指定された地域IDに対応する都市情報が見つかりませんでした。",
+      );
+    }
 
-  if (cityOption === undefined || findCityGroupByCityId(cityId) === undefined) {
-    throw new Error(
-      "指定された地域IDに対応する都市情報が見つかりませんでした。",
+    const dailyUrl = `${WEATHER_FORECAST_API_BASE_URL}?city=${cityId}`;
+
+    const [dailyResponse, weeklyData] = await Promise.all([
+      fetch(dailyUrl, {
+        next: { revalidate: 3600 }, // 1時間キャッシュ
+      }),
+      fetchWeeklyForecast(cityId),
+    ]);
+
+    if (!dailyResponse.ok) {
+      throw new Error("天気予報APIの取得に失敗しました。");
+    }
+
+    const dailyJson = await dailyResponse.json();
+    const dailyForecast = weatherForecastSchema.parse(dailyJson);
+
+    const weeklyTable = buildWeeklyTemperatureTable(
+      weeklyData,
+      cityOption.label,
     );
-  }
+    const useWeeklyForTomorrow = shouldUseWeeklyTemperaturesForTomorrow();
 
-  const dailyUrl = `${WEATHER_FORECAST_API_BASE_URL}?city=${cityId}`;
-
-  const [dailyResponse, weeklyData] = await Promise.all([
-    fetch(dailyUrl, { cache: "no-store" }),
-    fetchWeeklyForecast(cityId),
-  ]);
-
-  if (!dailyResponse.ok) {
-    throw new Error("天気予報APIの取得に失敗しました。");
-  }
-
-  const dailyJson = await dailyResponse.json();
-  const dailyForecast = weatherForecastSchema.parse(dailyJson);
-
-  const weeklyTable = buildWeeklyTemperatureTable(weeklyData, cityOption.label);
-  const useWeeklyForTomorrow = shouldUseWeeklyTemperaturesForTomorrow();
-
-  const mergedForecasts = dailyForecast.forecasts.map((forecast, index) => {
-    return mergeTemperature({
-      forecast,
-      index,
-      useWeeklyForTomorrow,
-      weeklyTable,
+    const mergedForecasts = dailyForecast.forecasts.map((forecast, index) => {
+      return mergeTemperature({
+        forecast,
+        index,
+        useWeeklyForTomorrow,
+        weeklyTable,
+      });
     });
-  });
 
-  return {
-    ...dailyForecast,
-    forecasts: mergedForecasts,
-  };
-}
+    return {
+      ...dailyForecast,
+      forecasts: mergedForecasts,
+    };
+  },
+);
 
 type MergeTemperatureOptions = {
   forecast: Forecast;
@@ -82,6 +89,11 @@ type MergeTemperatureOptions = {
   weeklyTable: WeeklyTemperatureTable;
 };
 
+/**
+ * 日次予報と週間予報の気温データをマージする
+ * @param options マージオプション
+ * @returns マージ済みの予報データ
+ */
 function mergeTemperature(options: MergeTemperatureOptions): Forecast {
   const { forecast, index } = options;
   const baseMin = normalizeTemperatureString(forecast.temperature.min.celsius);
@@ -137,6 +149,12 @@ function mergeTemperature(options: MergeTemperatureOptions): Forecast {
   };
 }
 
+/**
+ * 週間予報データから気温テーブルを構築する
+ * @param weeklyForecast 週間予報データ
+ * @param cityLabel 都市名
+ * @returns 週間気温テーブル
+ */
 function buildWeeklyTemperatureTable(
   weeklyForecast: WeeklyForecast,
   cityLabel: string,
@@ -165,7 +183,8 @@ function buildWeeklyTemperatureTable(
             );
             if (min !== null || max !== null) {
               const firstDate = timeDefines.at(0) ?? null;
-              shortTermDate = firstDate === null ? null : extractDate(firstDate);
+              shortTermDate =
+                firstDate === null ? null : extractDate(firstDate);
               shortTerm = {
                 minCelsius: min,
                 maxCelsius: max,
@@ -209,6 +228,11 @@ function buildWeeklyTemperatureTable(
   };
 }
 
+/**
+ * 気温文字列を正規化する（nullや空文字を統一的に扱う）
+ * @param value 気温文字列
+ * @returns 正規化された気温文字列、または null
+ */
 function normalizeTemperatureString(
   value: string | null | undefined,
 ): string | null {
@@ -225,6 +249,11 @@ function normalizeTemperatureString(
   return trimmed;
 }
 
+/**
+ * 摂氏温度を華氏温度に変換する
+ * @param celsius 摂氏温度（文字列）
+ * @returns 華氏温度（文字列）、または null
+ */
 function convertCelsiusToFahrenheit(celsius: string | null): string | null {
   if (celsius === null) {
     return null;
@@ -241,10 +270,19 @@ function convertCelsiusToFahrenheit(celsius: string | null): string | null {
   return fahrenheit.toFixed(1);
 }
 
+/**
+ * ISO形式の時刻文字列から日付部分（YYYY-MM-DD）を抽出する
+ * @param timeString ISO形式の時刻文字列
+ * @returns 日付文字列（YYYY-MM-DD）
+ */
 function extractDate(timeString: string): string {
   return timeString.slice(0, 10);
 }
 
+/**
+ * 現在時刻が11時以降かどうかを判定する（日本時間）
+ * @returns 11時以降の場合true
+ */
 function shouldUseWeeklyTemperaturesForTomorrow(): boolean {
   const formatter = new Intl.DateTimeFormat("ja-JP", {
     timeZone: "Asia/Tokyo",

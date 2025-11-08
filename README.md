@@ -1,6 +1,6 @@
 # 天気予報ダッシュボード
 
-リアルタイムの天気予報APIと気象庁が公開する週間予報データを組み合わせ、選択した地域の予報をグラフ付きで閲覧できる Next.js アプリケーションです。SWR によるデータキャッシュと `react-chartjs-2` によるビジュアライズで、最新の気象情報を直感的に確認できます。
+リアルタイムの天気予報APIと気象庁が公開する週間予報データを組み合わせ、選択した地域の予報をグラフ付きで閲覧できる Next.js アプリケーションです。React の `cache` によるデータメモ化と `react-chartjs-2` によるビジュアライズで、最新の気象情報を直感的に確認できます。
 
 ## 主な機能
 
@@ -12,8 +12,8 @@
 
 ## 使用技術
 
-- Next.js 16 (App Router, Route Handler)
-- TypeScript / SWR / Zod
+- Next.js 16 (App Router, Server Components, React cache)
+- TypeScript / Zod
 - Chart.js + react-chartjs-2
 - Biome (Lint / Format)
 - Noto Sans JP（`next/font` 経由で配信）
@@ -42,7 +42,7 @@ src/
 │   └── weather/             # 天気予報機能（Feature Based）
 │       ├── components/      # UI コンポーネント
 │       ├── constants/       # 定数・マスタデータ
-│       ├── hooks/           # SWR を利用したカスタムフック
+│       ├── hooks/           # カスタムフック（将来使用）
 │       ├── services/        # API アクセス・データ整形
 │       ├── types/           # Zod スキーマと型定義
 │       └── libs/            # ライブラリ初期化（Chart.js など）

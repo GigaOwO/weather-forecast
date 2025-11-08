@@ -1,5 +1,5 @@
 import Image from "next/image";
-import type { Forecast } from "@/features/weather/types/weather";
+import type { Forecast } from "@/features/weather/types";
 
 export type ForecastListProps = {
   forecasts: Forecast[];
@@ -7,10 +7,20 @@ export type ForecastListProps = {
 
 type ChanceEntry = [string, string];
 
+/**
+ * 降水確率オブジェクトをエントリー配列に変換する
+ * @param chance 降水確率オブジェクト
+ * @returns エントリー配列
+ */
 function toChanceEntries(chance: Record<string, string>): ChanceEntry[] {
   return Object.entries(chance);
 }
 
+/**
+ * 降水確率の単一アイテムを描画する
+ * @param entry 時間帯と確率のエントリー
+ * @returns 降水確率アイテムのJSX
+ */
 function renderChanceOfRainItem(entry: ChanceEntry) {
   const [timeRange, value] = entry;
 
@@ -22,10 +32,20 @@ function renderChanceOfRainItem(entry: ChanceEntry) {
   );
 }
 
+/**
+ * 降水確率リストを描画する
+ * @param chance 降水確率オブジェクト
+ * @returns 降水確率リストのJSX配列
+ */
 function renderChanceOfRain(chance: Record<string, string>) {
   return toChanceEntries(chance).map(renderChanceOfRainItem);
 }
 
+/**
+ * 予報カードを描画する
+ * @param forecast 予報データ
+ * @returns 予報カードのJSX
+ */
 function renderForecastCard(forecast: Forecast) {
   return (
     <li
@@ -69,6 +89,11 @@ function renderForecastCard(forecast: Forecast) {
   );
 }
 
+/**
+ * 天気予報リストを表示するコンポーネント
+ * @param props.forecasts 予報データの配列
+ * @returns 予報リストのJSX
+ */
 export function ForecastList(props: ForecastListProps) {
   return (
     <ul className="grid gap-4 md:grid-cols-3">
